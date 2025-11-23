@@ -32,6 +32,7 @@ async function run (){
         const db = client.db("rentwheel_DB");
         const carsCollection = db.collection('cars');
         const listingsCollection = db.collection('listings');
+        const bookingsCollection = db.collection('bookings');
         const usersCollection = db.collection('users'); 
 
         // Users API
@@ -69,21 +70,114 @@ async function run (){
             res.send(result);
         })
 
+        // Top-rated cars  |  Home page
+        // app.get('/toprated-cars', async (req, res) => {
+        //     const cursor =carsCollection.find().sort({rentPrice : -1}).limit(6);
+        //     const result = await cursor.toArray();
+        //     res.send(result);
+        // })
+
+
+
         app.get('/top-cars', async (req, res) => {
             const cursor = carsCollection.find().sort({rentPrice : -1}).limit(6);
             const result = await cursor.toArray();
             res.send(result);
         })
 
-        // Find specific car
+        // Find a car by ID
         app.get('/cars/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) };
+            console.log(query);
             const result = await carsCollection.findOne(query);
             res.send(result);
         })
+        
+//         app.get('/cars/:id', async (req, res) => {
+//     try {
+//         const id = req.params.id;
+//         console.log('Received ID parameter:', id);
+        
+//         // Check if ID is provided
+//         if (!id) {
+//             return res.status(400).json({ error: 'ID parameter is required' });
+//         }
+
+//         // Validate ObjectId format
+//         if (!ObjectId.isValid(id)) {
+//             return res.status(400).json({ error: 'Invalid ID format' });
+//         }
+
+//         const query = { _id: new ObjectId(id) };
+//         console.log('MongoDB query:', query);
+        
+//         const result = await carsCollection.findOne(query);
+//         console.log('Query result:', result);
+        
+//         // Check if car was found
+//         if (!result) {
+//             return res.status(404).json({ error: 'Car not found with the provided ID' });
+//         }
+        
+//         console.log('Sending car data:', result);
+//         res.json(result);
+        
+//     } catch (error) {
+//         console.error('Server error:', error);
+//         res.status(500).json({ error: 'Internal server error' });
+//     }
+// });
+
+//      // Add this test endpoint to debug the database connection
+//     app.get('/debug-db', async (req, res) => {
+//      try {
+//         console.log('=== DATABASE DEBUG INFO ===');
+        
+//         // Test basic collection operations
+//         const totalCars = await carsCollection.countDocuments();
+//         console.log('Total cars in collection:', totalCars);
+        
+//         // Get first car to verify collection access
+//         const firstCar = await carsCollection.findOne();
+//         console.log('First car in collection:', firstCar);
+        
+//         // Test the specific ID we're looking for
+//         const specificCar = await carsCollection.findOne({ 
+//             _id: new ObjectId('691752349a33195cc3fed362') 
+//         });
+//         console.log('Specific car lookup:', specificCar);
+        
+//         // Get all IDs for verification
+//         const allCars = await carsCollection.find({}, { projection: { _id: 1, carName: 1 } }).toArray();
+//         console.log('All car IDs and names:');
+//         allCars.forEach(car => {
+//             console.log(`- ${car._id.toString()}: ${car.carName}`);
+//         });
+
+//         res.json({
+//             success: true,
+//             totalCars: totalCars,
+//             firstCar: firstCar,
+//             specificCar: specificCar,
+//             allCars: allCars.map(car => ({ id: car._id.toString(), name: car.carName })),
+//             collectionName: carsCollection.collectionName,
+//             databaseName: db.databaseName
+//         });
+        
+//     } catch (error) {
+//         console.error('Debug endpoint error:', error);
+//         res.status(500).json({ 
+//             success: false, 
+//             error: error.message,
+//             stack: error.stack 
+//         });
+//     }
+//      });
+
 
         // Add a new car
+        
         app.post('/cars', async (req, res) => {
             const car = req.body;
             const result = await carsCollection.insertOne(car);
@@ -113,6 +207,7 @@ async function run (){
             const result = await carsCollection.updateOne(query, updateDoc);
             res.send(result);
         }) 
+
 
         // Listings APIs can be added here similarly
         app.get('/listings', async (req, res) => {
@@ -146,6 +241,31 @@ async function run (){
             res.send(result);
         })
 
+        // Booking APIs can be added here similarly
+        // For All Bookings
+        app.get('/bookings', async (req, res) => {
+            const email = req.query.email;
+            const query = {};
+            if (email) {
+                query.buyer_email = email;
+            }
+            const cursor = bookingsCollection.find(query);
+            const result = await cursor.toArray();
+            res.send(result);
+        })
+
+        app.get('/bookings/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await bookingsCollection.findOne(query);
+            res.send(result);
+        })
+
+        app.post('/bookings', async (req, res) => {
+            const newBooking = req.body;
+            const result = await bookingsCollection.insertOne(newBooking);
+            res.send(result);
+        })
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
