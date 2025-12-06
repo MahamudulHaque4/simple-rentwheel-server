@@ -50,7 +50,23 @@ async function run (){
                  res.send(result);}
         })
 
-        // Find all cars
+
+        // Top-rated cars  |  Home page
+        // app.get('/toprated-cars', async (req, res) => {
+        //     const cursor =carsCollection.find().sort({rentPrice : -1}).limit(6);
+        //     const result = await cursor.toArray();
+        //     res.send(result);
+        // })
+
+
+
+        app.get('/top-cars', async (req, res) => {
+            const cursor = carsCollection.find().sort({rentPrice : -1}).limit(6);
+            const result = await cursor.toArray();
+            res.send(result);
+        })
+
+         // Find all cars
         app.get('/cars', async (req, res) => {
             // const projectFields = {
             //     rentPrice: 1,
@@ -66,21 +82,6 @@ async function run (){
             }
 
             const cursor = carsCollection.find(query);
-            const result = await cursor.toArray();
-            res.send(result);
-        })
-
-        // Top-rated cars  |  Home page
-        // app.get('/toprated-cars', async (req, res) => {
-        //     const cursor =carsCollection.find().sort({rentPrice : -1}).limit(6);
-        //     const result = await cursor.toArray();
-        //     res.send(result);
-        // })
-
-
-
-        app.get('/top-cars', async (req, res) => {
-            const cursor = carsCollection.find().sort({rentPrice : -1}).limit(6);
             const result = await cursor.toArray();
             res.send(result);
         })
@@ -239,6 +240,52 @@ async function run (){
             const query = { _id: new ObjectId(id) }
             const result = await listingsCollection.deleteOne(query);
             res.send(result);
+        })
+
+        app.patch('/listings/:id', async (req, res) => {
+            try {
+                const id = req.params.id;
+                const updateData = req.body;
+                
+                // Validate ID
+                if (!ObjectId.isValid(id)) {
+                    return res.status(400).json({ error: 'Invalid listing ID format' });
+                }
+
+                const query = { _id: new ObjectId(id) };
+                
+                // Create update document dynamically based on what's provided
+                const updateDoc = {
+                    $set: {}
+                };
+
+                // Add only the fields that are provided in the request body
+                Object.keys(updateData).forEach(key => {
+                    updateDoc.$set[key] = updateData[key];
+                });
+
+                // Check if update document has fields to update
+                if (Object.keys(updateDoc.$set).length === 0) {
+                    return res.status(400).json({ error: 'No update fields provided' });
+                }
+
+                const result = await listingsCollection.updateOne(query, updateDoc);
+                
+                if (result.matchedCount === 0) {
+                    return res.status(404).json({ error: 'Listing not found' });
+                }
+
+                res.json({
+                    success: true,
+                    message: 'Listing updated successfully',
+                    matchedCount: result.matchedCount,
+                    modifiedCount: result.modifiedCount
+                });
+
+            } catch (error) {
+                console.error('Error updating listing:', error);
+                res.status(500).json({ error: 'Internal server error', details: error.message });
+            }
         })
 
         // Booking APIs can be added here similarly
