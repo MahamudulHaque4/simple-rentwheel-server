@@ -49,13 +49,6 @@ async function run() {
       }
     });
 
-    // Top-rated cars  |  Home page
-    // app.get('/toprated-cars', async (req, res) => {
-    //     const cursor =carsCollection.find().sort({rentPrice : -1}).limit(6);
-    //     const result = await cursor.toArray();
-    //     res.send(result);
-    // })
-
     app.get("/top-cars", async (req, res) => {
       const cursor = carsCollection.find().sort({ rentPrice: -1 }).limit(6);
       const result = await cursor.toArray();
@@ -307,7 +300,7 @@ async function run() {
           return res.status(400).json({ error: "Invalid booking id" });
         }
 
-        // 1️⃣ Find booking first
+        
         const booking = await bookingsCollection.findOne({
           _id: new ObjectId(id),
         });
@@ -316,14 +309,14 @@ async function run() {
           return res.status(404).json({ error: "Booking not found" });
         }
 
-        const carId = booking.bookingId; // 👈 this was saved when booking created
+        const carId = booking.bookingId;
 
-        // 2️⃣ Delete the booking
+     
         const deleteResult = await bookingsCollection.deleteOne({
           _id: new ObjectId(id),
         });
 
-        // 3️⃣ Make car available again
+     
         if (carId) {
           await carsCollection.updateOne(
             { _id: new ObjectId(carId) },
@@ -346,11 +339,11 @@ async function run() {
         const newBooking = req.body;
         const result = await bookingsCollection.insertOne(newBooking);
 
-        // ✅ update car status -> Booked
+       
         if (newBooking.bookingId) {
           await carsCollection.updateOne(
             { _id: new ObjectId(newBooking.bookingId) },
-            { $set: { status: "Booked" } } // or "Unavailable" if you prefer
+            { $set: { status: "Booked" } } 
           );
         }
 
@@ -364,13 +357,13 @@ async function run() {
       }
     });
 
-    // Send a ping to confirm a successful connection
+   
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
   } finally {
-    //   await client.close();
+   
   }
 }
 run().catch(console.dir);
