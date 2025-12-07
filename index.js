@@ -9,8 +9,7 @@ const port = process.env.PORT || 4000;
 app.use(cors());
 app.use(express.json());
 
-const uri =
-  `mongodb+srv://${process.env.DB_Username}:${process.env.DB_Password}@mahamuduldb.jterdty.mongodb.net/?appName=MahamudulDB`;
+const uri = `mongodb+srv://${process.env.DB_Username}:${process.env.DB_Password}@mahamuduldb.jterdty.mongodb.net/?appName=MahamudulDB`;
 
 const client = new MongoClient(uri, {
   serverApi: {
@@ -26,7 +25,7 @@ app.get("/", (req, res) => {
 
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
     console.log("MongoDB Connected ✔");
 
     const db = client.db("rentwheel_DB");
@@ -58,12 +57,6 @@ async function run() {
 
     // Find all cars
     app.get("/cars", async (req, res) => {
-      // const projectFields = {
-      //     rentPrice: 1,
-      //     carName: 1,
-      //     image : 1,}
-      // const cursor = carsCollection.find().sort({rentPrice: 1}).limit(5).project(projectFields);
-
       console.log(req.query);
       const email = req.query.email;
       const query = {};
@@ -85,89 +78,7 @@ async function run() {
       res.send(result);
     });
 
-    //         app.get('/cars/:id', async (req, res) => {
-    //     try {
-    //         const id = req.params.id;
-    //         console.log('Received ID parameter:', id);
-
-    //         // Check if ID is provided
-    //         if (!id) {
-    //             return res.status(400).json({ error: 'ID parameter is required' });
-    //         }
-
-    //         // Validate ObjectId format
-    //         if (!ObjectId.isValid(id)) {
-    //             return res.status(400).json({ error: 'Invalid ID format' });
-    //         }
-
-    //         const query = { _id: new ObjectId(id) };
-    //         console.log('MongoDB query:', query);
-
-    //         const result = await carsCollection.findOne(query);
-    //         console.log('Query result:', result);
-
-    //         // Check if car was found
-    //         if (!result) {
-    //             return res.status(404).json({ error: 'Car not found with the provided ID' });
-    //         }
-
-    //         console.log('Sending car data:', result);
-    //         res.json(result);
-
-    //     } catch (error) {
-    //         console.error('Server error:', error);
-    //         res.status(500).json({ error: 'Internal server error' });
-    //     }
-    // });
-
-    //      // Add this test endpoint to debug the database connection
-    //     app.get('/debug-db', async (req, res) => {
-    //      try {
-    //         console.log('=== DATABASE DEBUG INFO ===');
-
-    //         // Test basic collection operations
-    //         const totalCars = await carsCollection.countDocuments();
-    //         console.log('Total cars in collection:', totalCars);
-
-    //         // Get first car to verify collection access
-    //         const firstCar = await carsCollection.findOne();
-    //         console.log('First car in collection:', firstCar);
-
-    //         // Test the specific ID we're looking for
-    //         const specificCar = await carsCollection.findOne({
-    //             _id: new ObjectId('691752349a33195cc3fed362')
-    //         });
-    //         console.log('Specific car lookup:', specificCar);
-
-    //         // Get all IDs for verification
-    //         const allCars = await carsCollection.find({}, { projection: { _id: 1, carName: 1 } }).toArray();
-    //         console.log('All car IDs and names:');
-    //         allCars.forEach(car => {
-    //             console.log(`- ${car._id.toString()}: ${car.carName}`);
-    //         });
-
-    //         res.json({
-    //             success: true,
-    //             totalCars: totalCars,
-    //             firstCar: firstCar,
-    //             specificCar: specificCar,
-    //             allCars: allCars.map(car => ({ id: car._id.toString(), name: car.carName })),
-    //             collectionName: carsCollection.collectionName,
-    //             databaseName: db.databaseName
-    //         });
-
-    //     } catch (error) {
-    //         console.error('Debug endpoint error:', error);
-    //         res.status(500).json({
-    //             success: false,
-    //             error: error.message,
-    //             stack: error.stack
-    //         });
-    //     }
-    //      });
-
     // Add a new car
-
     app.post("/cars", async (req, res) => {
       const car = req.body;
       const result = await carsCollection.insertOne(car);
@@ -176,10 +87,30 @@ async function run() {
 
     // Delete a car
     app.delete("/cars/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await carsCollection.deleteOne(query);
-      res.send(result);
+      try {
+        const id = req.params.id;
+
+        if (!ObjectId.isValid(id)) {
+          return res
+            .status(400)
+            .json({ success: false, message: "Invalid car id format" });
+        }
+
+        const query = { _id: new ObjectId(id) };
+        const result = await carsCollection.deleteOne(query);
+
+        console.log("DELETE /cars/:id result:", result);
+
+        res.json({
+          success: result.deletedCount > 0,
+          deletedCount: result.deletedCount,
+        });
+      } catch (error) {
+        console.error("Error deleting car:", error);
+        res
+          .status(500)
+          .json({ success: false, message: "Internal server error" });
+      }
     });
 
     // Update a car
@@ -194,7 +125,7 @@ async function run() {
       res.send(result);
     });
 
-    // Listings APIs can be added here similarly
+    // Listings APIs
     app.get("/listings", async (req, res) => {
       const email = req.query.email;
       const query = {};
@@ -231,24 +162,20 @@ async function run() {
         const id = req.params.id;
         const updateData = req.body;
 
-        // Validate ID
         if (!ObjectId.isValid(id)) {
           return res.status(400).json({ error: "Invalid listing ID format" });
         }
 
         const query = { _id: new ObjectId(id) };
 
-        // Create update document dynamically based on what's provided
         const updateDoc = {
           $set: {},
         };
 
-        // Add only the fields that are provided in the request body
         Object.keys(updateData).forEach((key) => {
           updateDoc.$set[key] = updateData[key];
         });
 
-        // Check if update document has fields to update
         if (Object.keys(updateDoc.$set).length === 0) {
           return res.status(400).json({ error: "No update fields provided" });
         }
@@ -273,13 +200,12 @@ async function run() {
       }
     });
 
-    // Booking APIs can be added here similarly
-    // For All Bookings
+    // Booking APIs
     app.get("/bookings", async (req, res) => {
       const email = req.query.email;
       const query = {};
       if (email) {
-        query.buyerEmail = email; // ✅ correct field name
+        query.buyerEmail = email;
       }
       const cursor = bookingsCollection.find(query);
       const result = await cursor.toArray();
@@ -301,7 +227,6 @@ async function run() {
           return res.status(400).json({ error: "Invalid booking id" });
         }
 
-        
         const booking = await bookingsCollection.findOne({
           _id: new ObjectId(id),
         });
@@ -312,12 +237,10 @@ async function run() {
 
         const carId = booking.bookingId;
 
-     
         const deleteResult = await bookingsCollection.deleteOne({
           _id: new ObjectId(id),
         });
 
-     
         if (carId) {
           await carsCollection.updateOne(
             { _id: new ObjectId(carId) },
@@ -340,11 +263,10 @@ async function run() {
         const newBooking = req.body;
         const result = await bookingsCollection.insertOne(newBooking);
 
-       
         if (newBooking.bookingId) {
           await carsCollection.updateOne(
             { _id: new ObjectId(newBooking.bookingId) },
-            { $set: { status: "Booked" } } 
+            { $set: { status: "Booked" } }
           );
         }
 
@@ -358,13 +280,11 @@ async function run() {
       }
     });
 
-   
-    await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
   } finally {
-   
+    
   }
 }
 run().catch(console.dir);
